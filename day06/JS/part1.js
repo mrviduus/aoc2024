@@ -1,3 +1,4 @@
+// problem: https://adventofcode.com/2024/day/6
 const fs = require("fs");
 const path = require("path");
 
@@ -25,7 +26,7 @@ fs.readFile(INPUT_FILE, "utf-8", (err, data)=>{
         {dx: 0, dy: -1}, // Left
     ];
 
-    let direction = 0;
+    let direction = 0; // 0: Up, 1: Right, 2: Down, 3: Left  
 
     const visited = new Set();
 
