@@ -69,4 +69,4 @@ fs.readFile(INPUT_FILE, "utf-8", (err, input) => {
       );
     
       console.log(quad1 * quad2 * quad3 * quad4);
-    });
+});
