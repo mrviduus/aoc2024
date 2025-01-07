@@ -1,82 +1,137 @@
 const fs = require("fs");
-const path = require("path");
-
-const INPUT_FILE = path.join(__dirname, "../input.txt");
-
-const directionsMap = {
-  "^": { x: 0, y: -1 },
-  ">": { x: 1, y: 0 },
-  v: { x: 0, y: 1 },
-  "<": { x: -1, y: 0 },
-};
-
-fs.readFile(INPUT_FILE, "utf-8", (err, input) => {
-  const parts = input
+let [gridRaw, movements] = fs
+    .readFileSync("../input.txt", "utf8")
     .trim()
-    .split("\n\n")
-    .map((lines) => lines.split("\n"));
-  const grid = parts[0].map((line) => line.split(""));
-  const instructions = parts[1].join("");
-  const width = grid[0].length;
-  const height = grid.length;
+    .split("\n\n");
 
-  const moveBox = (position, direction) => {
-    const next = { x: position.x + direction.x, y: position.y + direction.y };
+movements = movements.replace(/\n/g, "").split("");
 
-    if (grid[next.y][next.x] === ".") {
-      // if next spot is empty, swap positions
-      let temp = grid[position.y][position.x];
-      grid[position.y][position.x] = grid[next.y][next.x];
-      grid[next.y][next.x] = temp;
-      return true;
-    } else if (grid[next.y][next.x] === "#") {
-      // if next spot is a wall, stop all boxes from moving
-      return false;
-    } else {
-      // only move the current box if the next box can move
-      if (moveBox(next, direction)) {
-        let temp = grid[position.y][position.x];
-        grid[position.y][position.x] = grid[next.y][next.x];
-        grid[next.y][next.x] = temp;
-        return true;
+let grid = gridRaw.split("\n").map((row) => row.split(""));
+let x = 0;
+let y = 0;
+
+//look for the @
+for (let i = 0; i < grid.length; i++) {
+  for (let j = 0; j < grid[i].length; j++) {
+    if (grid[i][j] === "@") {
+      x = j;
+      y = i;
+      break;
+    }
+  }
+}
+
+for (const mov of movements) {
+  if (mov == "<") {
+    //start scanning left from the current position
+    let boxCount = 0;
+    for (let i = x - 1; i >= 0; i--) {
+      if (grid[y][i] === "#" || grid[y][i] === ".") {
+        break;
+      }
+      if (grid[y][i] === "O") {
+        boxCount++;
       }
     }
-  };
 
-  // find the robot and clear it spaces
-  let robot = {};
-  for (let x = 0; x < width; x++) {
-    for (let y = 0; y < height; y++) {
-      if (grid[x][y] === "@") {
-        robot = { x, y };
+    //look at the postion to the left of the leftmost box
+    const posX = x - boxCount - 1;
+    const posY = y;
+
+    //if the position is empty, move the player and the boxes
+    if (grid[posY][posX] === ".") {
+      grid[y][x] = ".";
+      grid[posY][posX] = "O";
+      grid[y][x - 1] = "@";
+      x--;
+    }
+  } else if (mov == ">") {
+    //start scanning right from the current position
+    let boxCount = 0;
+    for (let i = x + 1; i < grid[y].length; i++) {
+      if (grid[y][i] === "#" || grid[y][i] === ".") {
+        break;
       }
+      if (grid[y][i] === "O") {
+        boxCount++;
+      }
+    }
+
+    const posX = x + boxCount + 1;
+    const posY = y;
+
+    //if the position is empty, move the player and the boxes
+    if (grid[posY][posX] === ".") {
+      grid[y][x] = ".";
+      grid[posY][posX] = "O";
+      grid[y][x + 1] = "@";
+      x++;
+    }
+  } else if (mov == "^") {
+    //start scanning up from the current position
+    let boxCount = 0;
+    for (let i = y - 1; i >= 0; i--) {
+      if (grid[i][x] === "#" || grid[i][x] === ".") {
+        break;
+      }
+      if (grid[i][x] === "O") {
+        boxCount++;
+      }
+    }
+
+    const posX = x;
+    const posY = y - boxCount - 1;
+
+    //if the position is empty, move the player and the boxes
+    if (grid[posY][posX] === ".") {
+      grid[y][x] = ".";
+
+      grid[posY][posX] = "O";
+      grid[y - 1][x] = "@";
+      y--;
+    }
+  } else {
+    let boxCount = 0;
+    for (let i = y + 1; i < grid.length; i++) {
+      if (grid[i][x] === "#" || grid[i][x] === ".") {
+        break;
+      }
+      if (grid[i][x] === "O") {
+        boxCount++;
+      }
+    }
+
+    const posX = x;
+    const posY = y + boxCount + 1;
+
+    //if the position is empty, move the player and the boxes
+    if (grid[posY][posX] === ".") {
+      grid[y][x] = ".";
+
+      grid[posY][posX] = "O";
+      grid[y + 1][x] = "@";
+      y++;
     }
   }
 
-  for (let i = 0; i < instructions.length; i++) {
-    const direction = directionsMap[instructions[i]];
-    const position = { x: robot.x + direction.x, y: robot.y + direction.y };
+  //console.log(mov, x, y);
+  //print the grid
+  for (const row of grid) {
+    //console.log(row.join(""));
+  }
+}
 
-    // if there is a wall, don't move
-    if (grid[position.y][position.x] !== "#") {
-      // if there is an emprt spot, move without moving boxes
-      if (grid[position.y][position.x] === ".") robot = position;
+//print the grid
+for (const row of grid) {
+  //console.log(row.join(""));
+}
 
-      // if there is a box, try to move all the boxes, then move
-      if (grid[position.y][position.x] === "O") {
-        if (moveBox(position, direction)) {
-          robot = position;
-        }
-      }
+let score = 0;
+for (let y = 0; y < grid.length; y++) {
+  for (let x = 0; x < grid[y].length; x++) {
+    if (grid[y][x] === "O") {
+      score += y * 100 + x;
     }
   }
-
-  let score = 0;
-  for (let x = 0; x < width; x++) {
-    for (let y = 0; y < height; y++) {
-      if (grid[x][y] === "O") score += x * 100 + y;
-    }
-  }
-
-  console.log(score);
-});
+}
+console.log(score);
