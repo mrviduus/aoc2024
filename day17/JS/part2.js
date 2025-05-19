@@ -9,85 +9,63 @@ fs.readFile(INPUT_FILE, "utf-8", (err, input) => {
     process.exit(1);
   }
 
-  // Normalize line endings and remove empty lines explicitly
-  const lines = input.split(/\r?\n/).map(line => line.trim()).filter(line => line !== "");
+  const lines = input
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
 
-  // For debugging clarity, log parsed lines
-  console.log("Parsed Lines:", lines);
+  const programLine = lines.find((line) => line.startsWith("Program:"));
+  const prog = programLine
+    .split(":")[1]
+    .trim()
+    .split(",")
+    .map(Number);
 
-  if (lines.length < 4) {
-    console.error("Input file format error: expected at least 4 lines");
-    process.exit(1);
-  }
+  function run(initialA) {
+    let a = initialA, b = 0, c = 0, ip = 0;
 
-  // Extract registers explicitly
-  const A = parseInt(lines[0].split(":")[1].trim(), 10);
-  const B = parseInt(lines[1].split(":")[1].trim(), 10);
-  const C = parseInt(lines[2].split(":")[1].trim(), 10);
+    const combo = (arg) =>
+      arg < 4 ? arg : arg === 4 ? a : arg === 5 ? b : arg === 6 ? c : null;
 
-  // Ensure program line is correctly identified and parsed
-  const programLine = lines.find(line => line.startsWith("Program:"));
-  if (!programLine) {
-    console.error("Program line not found in the input file");
-    process.exit(1);
-  }
+    let out = [];
 
-  const programData = programLine.substring(programLine.indexOf(":") + 1).trim();
-  if (!programData) {
-    console.error("No instructions found after 'Program:'");
-    process.exit(1);
-  }
+    while (ip < prog.length) {
+      const ins = prog[ip], arg = prog[++ip];
+      ++ip;
 
-  const program = programData.split(",").map(Number);
-
-  console.log("Registers:", { A, B, C });
-  console.log("Program:", program);
-
-  let outputs = [];
-  let ip = 0;
-  let registers = [A, B, C];
-
-  while (ip < program.length) {
-    const opcode = program[ip];
-    if (ip + 1 >= program.length) break;
-    const operand = program[ip + 1];
-
-    switch (opcode) {
-      case 0:
-        registers[0] = Math.floor(registers[0] / (2 ** (operand <= 3 ? operand : registers[operand - 4])));
-        break;
-      case 1:
-        registers[1] ^= operand;
-        break;
-      case 2:
-        registers[1] = (operand <= 3 ? operand : registers[operand - 4]) % 8;
-        break;
-      case 3:
-        if (registers[0] !== 0) {
-          ip = operand;
-          continue;
-        }
-        break;
-      case 4:
-        registers[1] ^= registers[2];
-        break;
-      case 5:
-        outputs.push((operand <= 3 ? operand : registers[operand - 4]) % 8);
-        break;
-      case 6:
-        registers[1] = Math.floor(registers[0] / (2 ** (operand <= 3 ? operand : registers[operand - 4])));
-        break;
-      case 7:
-        registers[2] = Math.floor(registers[0] / (2 ** (operand <= 3 ? operand : registers[operand - 4])));
-        break;
-      default:
-        console.error("Unknown opcode:", opcode);
-        process.exit(1);
+      if (ins === 0) a = Math.floor(a / (2 ** combo(arg)));
+      else if (ins === 1) b ^= arg;
+      else if (ins === 2) b = combo(arg) & 7;
+      else if (ins === 3) {
+        if (a !== 0) ip = arg;
+      } else if (ins === 4) b ^= c;
+      else if (ins === 5) out.push(combo(arg) & 7);
+      else if (ins === 6) b = Math.floor(a / (2 ** combo(arg)));
+      else if (ins === 7) c = Math.floor(a / (2 ** combo(arg)));
     }
 
-    ip += 2;
+    return out;
   }
 
-  const finalOutput = outputs.join(",");
-  console.log("Final output:", finalOutput);
+  const eq = (arra, arrb) =>
+    arra.length === arrb.length && arra.every((v, i) => v === arrb[i]);
+
+  let q = [[prog.length - 1, 0]];
+  let sols = [];
+
+  while (q.length) {
+    const [cnt, v] = q.pop();
+
+    for (let h = 0; h < 8; ++h) {
+      let a = v * 8 + h;
+      if (eq(run(a), prog.slice(cnt))) {
+        if (cnt === 0) sols.push(a);
+        else q.push([cnt - 1, a]);
+      }
+    }
+  }
+
+  const minimalA = Math.min(...sols);
+  console.log(" Minimal initial value for A (Part 2):", minimalA);
 });
+
