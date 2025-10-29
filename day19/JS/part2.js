@@ -8,44 +8,39 @@ fs.readFile(INPUT_FILE, "utf-8", (err, input) => {
         process.exit(1);
     }
 
-    // Разделяем вход: до первой пустой строки — полотенца, потом — дизайны
     const [patternLine, ...rest] = input.trim().split("\n");
     const splitIndex = rest.findIndex(line => line.trim() === "");
     const patterns = patternLine.split(",").map(p => p.trim());
-
     const designs = rest.slice(splitIndex + 1).map(line => line.trim()).filter(Boolean);
 
-    // Функция: можно ли собрать дизайн из полотенец
-    function canMakeDesign(design, patterns) {
+    function countWays(design, patterns) {
         const memo = new Map();
 
         function dfs(remaining) {
-            if (remaining === "") return true;
+            if (remaining === "") return 1;
             if (memo.has(remaining)) return memo.get(remaining);
+
+            let totalWays = 0;
 
             for (const pat of patterns) {
                 if (remaining.startsWith(pat)) {
-                    if (dfs(remaining.slice(pat.length))) {
-                        memo.set(remaining, true);
-                        return true;
-                    }
+                    totalWays += dfs(remaining.slice(pat.length));
                 }
             }
 
-            memo.set(remaining, false);
-            return false;
+            memo.set(remaining, totalWays);
+            return totalWays;
         }
 
         return dfs(design);
     }
 
-    // Подсчёт количества возможных дизайнов
-    let count = 0;
+    let total = 0;
     for (const design of designs) {
-        if (canMakeDesign(design, patterns)) {
-            count++;
-        }
+        const ways = countWays(design, patterns);
+        console.log(`${design}: ${ways} way(s)`);
+        total += ways;
     }
 
-    console.log("Possible designs:", count);
+    console.log("Total different ways:", total);
 });
